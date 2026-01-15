@@ -1,8 +1,0 @@
-resources:
-  dashboards:
-    ai_bi_ci_cd_dash:
-      display_name: "AIBICICD"
-      file_path: ../src/[Local] AIBICICD.lvdash.json
-      warehouse_id: ${var.warehouse_id}
-      dataset_catalog: ${bundle.target}
-      dataset_schema: bakehouse
