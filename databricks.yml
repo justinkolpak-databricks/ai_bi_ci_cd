@@ -10,7 +10,7 @@ variables:
   warehouse_id:
     lookup:
       # Replace this with the name of your SQL warehouse.
-      warehouse: "Shared Unity Catalog Serverless"
+      warehouse: "Serverless Starter Warehouse"
 
 workspace:
 
@@ -20,16 +20,16 @@ targets:
     mode: development
     default: true
     workspace:
-      host: https://e2-demo-field-eng.cloud.databricks.com
+      host: https://dbc-597c1f0f-03e2.cloud.databricks.com/
 
   # The 'prod' target, used for production deployment.
   prod:
     mode: production
     workspace:
-      host: https://e2-demo-field-eng.cloud.databricks.com
-      # We always use /Users/justin.kolpak@databricks.com for all resources to make sure we only have a single copy.
-      root_path: /Users/justin.kolpak@databricks.com/.bundle/${bundle.name}/${bundle.target}
+      host: https://dbc-597c1f0f-03e2.cloud.databricks.com/
+      # We always use /Users/justin.kolpak@gmail.com for all resources to make sure we only have a single copy.
+      root_path: /Users/justin.kolpak@gmail.com/.bundle/${bundle.name}/${bundle.target}
     run_as:
-      # This runs as justin.kolpak@databricks.com in production. We could also use a service principal here,
+      # This runs as justin.kolpak@gmail.com in production. We could also use a service principal here,
       # see https://docs.databricks.com/dev-tools/bundles/permissions.html.
-      user_name: justin.kolpak@databricks.com
+      user_name: justin.kolpak@gmail.com
