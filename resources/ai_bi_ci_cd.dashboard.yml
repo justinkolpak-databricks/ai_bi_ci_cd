@@ -1,0 +1,8 @@
+resources:
+  dashboards:
+    bakehouse_analytics_dashboard:
+      display_name: "Bakehouse Analytics Dashboard"
+      file_path: ../src/[Local] Bakehouse Analytics Dashboard.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${bundle.target}
+      dataset_schema: bakehouse
