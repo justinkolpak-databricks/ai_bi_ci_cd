@@ -4,34 +4,41 @@
       "name": "9f1f2efa",
       "displayName": "Sales Transactions",
       "queryLines": [
-        "SELECT * FROM samples.bakehouse.sales_transactions"
+        "SELECT * FROM sales_transactions"
       ],
       "columns": [
         {
           "displayName": "Date",
+          "description": "",
           "expression": "DATE(dateTime)"
         }
-      ]
+      ],
+      "catalog": "dev",
+      "schema": "bakehouse"
     },
     {
       "name": "6f74600d",
       "displayName": "Customer Demographics",
       "queryLines": [
-        "SELECT * FROM samples.bakehouse.sales_customers"
-      ]
+        "SELECT * FROM sales_customers"
+      ],
+      "catalog": "dev",
+      "schema": "bakehouse"
     },
     {
       "name": "31b8a596",
       "displayName": "Customer Reviews",
       "queryLines": [
-        "SELECT * FROM samples.bakehouse.media_customer_reviews"
-      ]
+        "SELECT * FROM media_customer_reviews"
+      ],
+      "catalog": "dev",
+      "schema": "bakehouse"
     }
   ],
   "pages": [
     {
       "name": "9040c0f3",
-      "displayName": "Untitled page",
+      "displayName": "Bakehouse Sales",
       "layout": [
         {
           "widget": {
