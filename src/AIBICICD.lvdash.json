@@ -4,7 +4,7 @@
       "name": "babf7b74",
       "displayName": "feature_definitions",
       "queryLines": [
-        "SELECT * FROM samples.bakehouse.sales_customers;"
+        "SELECT *, 1 as col1 FROM samples.bakehouse.sales_customers;"
       ]
     }
   ],
@@ -357,6 +357,41 @@
           },
           "position": {
             "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "d9e148fe",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "babf7b74",
+                  "fields": [
+                    {
+                      "name": "sum(col1)",
+                      "expression": "SUM(`col1`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(col1)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
             "y": 0,
             "width": 3,
             "height": 6
