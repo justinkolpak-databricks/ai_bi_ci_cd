@@ -1,0 +1,37 @@
+name: Deploy to Prod
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Download the Databricks CLI
+        uses: databricks/setup-cli@main
+      
+      - name: Validate bundle
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_PROD }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_PROD }}
+        run: databricks bundle validate -t prod
+      
+      - name: Deploy to prod
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_PROD }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_PROD }}
+        run: databricks bundle deploy -t prod
+      
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Successfully deployed to dev environment"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
