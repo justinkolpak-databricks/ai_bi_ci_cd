@@ -27,7 +27,7 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_PROD }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_PROD }}
-        run: databricks bundle deploy -t prod
+        run: databricks bundle deploy -t prod --auto-approve
       
       - name: Notify on success
         if: success()
