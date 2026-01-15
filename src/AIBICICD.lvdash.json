@@ -1,0 +1,74 @@
+{
+  "datasets": [
+    {
+      "name": "babf7b74",
+      "displayName": "feature_definitions",
+      "queryLines": [
+        "SELECT * FROM justin_kolpak.credit.feature_definitions"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "8e98e19c",
+      "displayName": "tab name 1",
+      "layout": [
+        {
+          "widget": {
+            "name": "8f342f4c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "babf7b74",
+                  "fields": [
+                    {
+                      "name": "definition",
+                      "expression": "`definition`"
+                    },
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "definition",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
