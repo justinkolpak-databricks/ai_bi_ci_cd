@@ -372,8 +372,8 @@
                   "datasetName": "babf7b74",
                   "fields": [
                     {
-                      "name": "sum(col1)",
-                      "expression": "SUM(`col1`)"
+                      "name": "avg(col1)",
+                      "expression": "AVG(`col1`)"
                     }
                   ],
                   "disaggregated": false
@@ -385,7 +385,7 @@
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "sum(col1)"
+                  "fieldName": "avg(col1)"
                 }
               }
             }
