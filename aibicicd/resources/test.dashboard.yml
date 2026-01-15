@@ -1,0 +1,6 @@
+resources:
+  dashboards:
+    nyc_taxi_trip_analysis:
+      display_name: "AIBICICD"
+      file_path: ../src/AIBICICD.lvdash.json
+      warehouse_id: ${var.warehouse_id}
