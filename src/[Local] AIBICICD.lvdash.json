@@ -2,10 +2,12 @@
   "datasets": [
     {
       "name": "babf7b74",
-      "displayName": "feature_definitions",
+      "displayName": "Sales Customers",
       "queryLines": [
-        "SELECT *, 1 as col1 FROM samples.bakehouse.sales_customers;"
-      ]
+        "SELECT * FROM sales_customers;"
+      ],
+      "catalog": "dev",
+      "schema": "bakehouse"
     }
   ],
   "pages": [
