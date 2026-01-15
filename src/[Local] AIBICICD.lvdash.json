@@ -11,7 +11,7 @@
   "pages": [
     {
       "name": "8e98e19c",
-      "displayName": "tab name 1",
+      "displayName": "tabname2",
       "layout": [
         {
           "widget": {
@@ -372,11 +372,11 @@
                   "datasetName": "babf7b74",
                   "fields": [
                     {
-                      "name": "avg(col1)",
-                      "expression": "AVG(`col1`)"
+                      "name": "col1",
+                      "expression": "`col1`"
                     }
                   ],
-                  "disaggregated": false
+                  "disaggregated": true
                 }
               }
             ],
@@ -385,7 +385,12 @@
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "avg(col1)"
+                  "fieldName": "col1",
+                  "style": {
+                    "bold": true,
+                    "italic": true,
+                    "underline": true
+                  }
                 }
               }
             }
