@@ -14,13 +14,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      
-      - name: Install Databricks CLI
-        run: pip install databricks-cli
+      - name: Download the Databricks CLI
+        uses: databricks/setup-cli@main
       
       - name: Validate bundle
         env:
