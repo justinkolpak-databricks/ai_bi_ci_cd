@@ -1,0 +1,181 @@
+name: PR Preview Deploy
+
+on:
+  pull_request:
+    branches:
+      - dev
+    types: [opened, synchronize, reopened]
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v3
+      
+      - name: Download the Databricks CLI
+        uses: databricks/setup-cli@main
+      
+      - name: Create preview bundle config
+        run: |
+          # Create a temporary preview target in databricks.yml
+          # This assumes your bundle structure - you may need to adjust
+          cat >> databricks.yml << EOF
+          
+          targets:
+            pr-${{ github.event.pull_request.number }}:
+              mode: development
+              workspace:
+                host: \${var.databricks_host_dev}
+              root_path: /Workspace/.bundle/pr-previews/pr-${{ github.event.pull_request.number }}
+              # Override dashboard paths to deploy to preview location
+              resources:
+                dashboards:
+                  # This will prefix all dashboard paths
+                  # Adjust based on your actual bundle structure
+                  path_prefix: "/PR-Previews/pr-${{ github.event.pull_request.number }}"
+          EOF
+      
+      - name: Validate preview bundle
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: databricks bundle validate -t pr-${{ github.event.pull_request.number }}
+      
+      - name: Deploy preview
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: databricks bundle deploy -t pr-${{ github.event.pull_request.number }} --auto-approve
+      
+      - name: Get dashboard URLs
+        id: get-urls
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: |
+          # Get deployed dashboard info from bundle
+          DASHBOARD_INFO=$(databricks bundle resources -t pr-${{ github.event.pull_request.number }} 2>/dev/null || echo "")
+          
+          # Extract dashboard URLs - this is a simple approach
+          # You may need to adjust based on your actual output format
+          echo "dashboard_info<<EOF" >> $GITHUB_OUTPUT
+          echo "$DASHBOARD_INFO" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Generate change summary
+        id: changes
+        run: |
+          # Find changed dashboard JSON files
+          CHANGED_FILES=$(git diff --name-only origin/dev...HEAD | grep -E '\.(dashboard\.json|lvdash\.json)$' || echo "")
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "summary=No dashboard changes detected" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Create summary
+          SUMMARY="### 📊 Dashboard Changes Detected\n\n"
+          
+          for file in $CHANGED_FILES; do
+            SUMMARY="${SUMMARY}**File:** \`$file\`\n"
+            
+            # Try to extract dashboard name from JSON
+            if [ -f "$file" ]; then
+              DASH_NAME=$(jq -r '.display_name // .displayName // .name // "Unknown"' "$file" 2>/dev/null || echo "Unknown")
+              SUMMARY="${SUMMARY}- Dashboard: **$DASH_NAME**\n"
+            fi
+            
+            # Show basic stats about the change
+            ADDITIONS=$(git diff origin/dev...HEAD -- "$file" | grep -c "^+" || echo "0")
+            DELETIONS=$(git diff origin/dev...HEAD -- "$file" | grep -c "^-" || echo "0")
+            SUMMARY="${SUMMARY}- Changes: +$ADDITIONS / -$DELETIONS lines\n"
+            SUMMARY="${SUMMARY}\n"
+          done
+          
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const changes = `${{ steps.changes.outputs.summary }}`;
+            const dashboardInfo = `${{ steps.get-urls.outputs.dashboard_info }}`;
+            
+            const body = `## 🚀 Preview Dashboard Deployed
+            
+            ${changes}
+            
+            ### Preview Environment
+            - **PR Number:** #${prNumber}
+            - **Workspace Location:** \`/PR-Previews/pr-${prNumber}/\`
+            - **Databricks Host:** \`${{ secrets.DATABRICKS_HOST_DEV }}\`
+            
+            ### Deployed Resources
+            \`\`\`
+            ${dashboardInfo}
+            \`\`\`
+            
+            ### 🔗 Access Preview
+            Navigate to your Databricks workspace and find dashboards under:
+            \`/PR-Previews/pr-${prNumber}/\`
+            
+            Or visit: [${{ secrets.DATABRICKS_HOST_DEV }}](https://${{ secrets.DATABRICKS_HOST_DEV }}/#workspace/PR-Previews/pr-${prNumber})
+            
+            ---
+            *Preview will be automatically deleted when this PR is closed or merged.*
+            `;
+            
+            // Check if we already commented
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Preview Dashboard Deployed')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body
+              });
+            }
+      
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Successfully deployed preview for PR #${{ github.event.pull_request.number }}"
+          echo "Preview location: /PR-Previews/pr-${{ github.event.pull_request.number }}/"
+      
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: '❌ Preview deployment failed. Check the [workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
+            });
