@@ -122,17 +122,14 @@ jobs:
             - **PR Number:** #${prNumber}
             - **Workspace Location:** \`/PR-Previews/pr-${prNumber}/\`
             - **Databricks Host:** \`${{ secrets.DATABRICKS_HOST_DEV }}\`
-            
+
+            ### 🔗 Access Preview
+            [${{ secrets.DATABRICKS_HOST_DEV }}](${{ secrets.DATABRICKS_HOST_DEV }}/#root_path: /Workspace/.bundle/pr-previews/pr-${{ github.event.pull_request.number }})
+                        
             ### Deployed Resources
             \`\`\`
             ${dashboardInfo}
             \`\`\`
-            
-            ### 🔗 Access Preview
-            Navigate to your Databricks workspace and find dashboards under:
-            \`/PR-Previews/pr-${prNumber}/\`
-            
-            Or visit: [${{ secrets.DATABRICKS_HOST_DEV }}](https://${{ secrets.DATABRICKS_HOST_DEV }}/#workspace/PR-Previews/pr-${prNumber})
             
             ---
             *Preview will be automatically deleted when this PR is closed or merged.*
