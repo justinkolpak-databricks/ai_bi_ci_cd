@@ -5,7 +5,6 @@ on:
     branches:
       - dev
     types: [opened, synchronize, reopened]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,23 +24,29 @@ jobs:
       
       - name: Create preview bundle config
         run: |
-          # Create a temporary preview target in databricks.yml
-          # This assumes your bundle structure - you may need to adjust
-          cat >> databricks.yml << EOF
+          # Parse all dashboard names from resources/*.yml files
+          DASHBOARD_NAMES=$(grep -r "^  dashboards:" resources/*.yml -A 100 | grep "^    [a-zA-Z]" | sed 's/://g' | awk '{print $1}' | sort -u)
           
-          targets:
-            pr-${{ github.event.pull_request.number }}:
-              mode: development
-              workspace:
-                host: ${{ secrets.DATABRICKS_HOST_DEV }}
-              root_path: /Workspace/.bundle/pr-previews/pr-${{ github.event.pull_request.number }}
-              # Override dashboard paths to deploy to preview location
-              resources:
-                dashboards:
-                  # This will prefix all dashboard paths
-                  # Adjust based on your actual bundle structure
-                  path_prefix: "/PR-Previews/pr-${{ github.event.pull_request.number }}"
-          EOF
+          # Start building the preview target config
+          cat >> databricks.yml << 'EOF'
+          
+targets:
+  pr-${{ github.event.pull_request.number }}:
+    mode: development
+    workspace:
+      host: https://dbc-597c1f0f-03e2.cloud.databricks.com/
+      root_path: /Workspace/.bundle/pr-previews/pr-${{ github.event.pull_request.number }}
+    resources:
+      dashboards:
+EOF
+          
+          # Add parent_path override for each dashboard
+          for dashboard in $DASHBOARD_NAMES; do
+            cat >> databricks.yml << EOF
+        $dashboard:
+          parent_path: /PR-Previews/pr-${{ github.event.pull_request.number }}
+EOF
+          done
       
       - name: Validate preview bundle
         env:
@@ -122,14 +127,17 @@ jobs:
             - **PR Number:** #${prNumber}
             - **Workspace Location:** \`/PR-Previews/pr-${prNumber}/\`
             - **Databricks Host:** \`${{ secrets.DATABRICKS_HOST_DEV }}\`
-
-            ### 🔗 Access Preview
-            [Link to Preview Dashboard](${{ secrets.DATABRICKS_HOST_DEV }}/Workspace/.bundle/pr-previews/pr-${{ github.event.pull_request.number }})
-                        
+            
             ### Deployed Resources
             \`\`\`
             ${dashboardInfo}
             \`\`\`
+            
+            ### 🔗 Access Preview
+            Navigate to your Databricks workspace and find dashboards under:
+            \`/PR-Previews/pr-${prNumber}/\`
+            
+            Or visit: [${{ secrets.DATABRICKS_HOST_DEV }}](https://${{ secrets.DATABRICKS_HOST_DEV }}/#workspace/PR-Previews/pr-${prNumber})
             
             ---
             *Preview will be automatically deleted when this PR is closed or merged.*
