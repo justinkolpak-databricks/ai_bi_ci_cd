@@ -76,7 +76,7 @@
           "position": {
             "x": 0,
             "y": 0,
-            "width": 2,
+            "width": 3,
             "height": 3
           }
         },
@@ -114,9 +114,9 @@
             }
           },
           "position": {
-            "x": 2,
+            "x": 3,
             "y": 0,
-            "width": 2,
+            "width": 3,
             "height": 3
           }
         },
@@ -154,9 +154,9 @@
             }
           },
           "position": {
-            "x": 4,
+            "x": 6,
             "y": 0,
-            "width": 2,
+            "width": 3,
             "height": 3
           }
         },
@@ -217,7 +217,7 @@
           "position": {
             "x": 0,
             "y": 3,
-            "width": 3,
+            "width": 6,
             "height": 5
           }
         },
@@ -269,9 +269,9 @@
             }
           },
           "position": {
-            "x": 3,
+            "x": 6,
             "y": 3,
-            "width": 3,
+            "width": 6,
             "height": 5
           }
         },
@@ -325,7 +325,7 @@
           "position": {
             "x": 0,
             "y": 8,
-            "width": 6,
+            "width": 12,
             "height": 5
           }
         },
@@ -386,7 +386,7 @@
           "position": {
             "x": 0,
             "y": 13,
-            "width": 3,
+            "width": 6,
             "height": 5
           }
         },
@@ -438,9 +438,9 @@
             }
           },
           "position": {
-            "x": 3,
+            "x": 6,
             "y": 13,
-            "width": 3,
+            "width": 6,
             "height": 5
           }
         },
@@ -725,7 +725,7 @@
           "position": {
             "x": 0,
             "y": 18,
-            "width": 6,
+            "width": 12,
             "height": 5
           }
         },
@@ -786,12 +786,53 @@
           "position": {
             "x": 0,
             "y": 23,
-            "width": 6,
+            "width": 12,
             "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "afbe9db1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9f1f2efa",
+                  "fields": [
+                    {
+                      "name": "sum(quantity)",
+                      "expression": "SUM(`quantity`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "title": "Items Sold",
+                "showTitle": true
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(quantity)",
+                  "displayName": "Total Revenue"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
           }
         }
       ],
-      "pageType": "PAGE_TYPE_CANVAS"
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
     }
   ],
   "uiSettings": {
