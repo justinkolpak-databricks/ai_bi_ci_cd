@@ -60,16 +60,16 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "title": "Total Revenue JBK",
+                "showTitle": true
+              },
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "sum(totalPrice)",
                   "displayName": "Total Revenue"
                 }
-              },
-              "frame": {
-                "title": "Total Revenue",
-                "showTitle": true
               }
             }
           },
