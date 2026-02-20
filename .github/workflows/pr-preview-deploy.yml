@@ -28,7 +28,7 @@ jobs:
             pr-${{ github.event.pull_request.number }}:
               mode: development
               workspace:
-                host: \${{ secrets.DATABRICKS_HOST_DEV }}
+                host: ${{ secrets.DATABRICKS_HOST_DEV }}
               root_path: /Workspace/.bundle/pr-previews/pr-${{ github.event.pull_request.number }}
               # Override dashboard paths to deploy to preview location
               resources:
