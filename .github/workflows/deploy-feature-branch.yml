@@ -1,0 +1,214 @@
+name: Deploy Feature Branch
+
+on:
+  pull_request:
+    branches:
+      - dev
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  deploy-feature:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v3
+      
+      - name: Download the Databricks CLI
+        uses: databricks/setup-cli@main
+      
+      - name: Create feature branch bundle target
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          # Sanitize branch name for use in paths (replace / with -)
+          SAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+          
+          # Parse all dashboard names from resources/*.yml files
+          DASHBOARD_NAMES=$(grep -r "^  dashboards:" resources/*.yml -A 100 | grep "^    [a-zA-Z]" | sed 's/://g' | awk '{print $1}' | sort -u)
+          
+          # Create the feature target configuration
+          cat >> databricks.yml << EOF
+
+targets:
+  feature-${SAFE_BRANCH_NAME}:
+    mode: development
+    workspace:
+      host: https://dbc-597c1f0f-03e2.cloud.databricks.com/
+      root_path: /Workspace/.bundle/feature-branches/${SAFE_BRANCH_NAME}
+    resources:
+      dashboards:
+EOF
+          
+          # Add parent_path override for each dashboard
+          for dashboard in $DASHBOARD_NAMES; do
+            cat >> databricks.yml << EOF
+        $dashboard:
+          parent_path: /FeatureBranches/${SAFE_BRANCH_NAME}
+EOF
+          done
+          
+          echo "SAFE_BRANCH_NAME=${SAFE_BRANCH_NAME}" >> $GITHUB_ENV
+      
+      - name: Validate bundle
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: databricks bundle validate -t feature-${{ env.SAFE_BRANCH_NAME }}
+      
+      - name: Deploy feature branch
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: databricks bundle deploy -t feature-${{ env.SAFE_BRANCH_NAME }} --auto-approve
+      
+      - name: Get deployed dashboard info
+        id: dashboards
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: |
+          # Get bundle output
+          BUNDLE_OUTPUT=$(databricks bundle resources -t feature-${{ env.SAFE_BRANCH_NAME }} 2>/dev/null || echo "")
+          
+          echo "bundle_output<<EOF" >> $GITHUB_OUTPUT
+          echo "$BUNDLE_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Generate dashboard summary
+        id: summary
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          SAFE_BRANCH_NAME="${{ env.SAFE_BRANCH_NAME }}"
+          
+          # Find changed dashboard JSON files
+          CHANGED_FILES=$(git diff --name-only origin/dev...HEAD | grep -E '\.lvdash\.json$|\.dashboard\.json$' || echo "")
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          
+          # Build dashboard list with direct links
+          DASHBOARD_LIST=""
+          for file in $CHANGED_FILES; do
+            if [ -f "$file" ]; then
+              DASH_NAME=$(jq -r '.display_name // .displayName // .name // "Unknown"' "$file" 2>/dev/null || echo "Unknown")
+              # URL encode the dashboard name for the link
+              ENCODED_NAME=$(echo "$DASH_NAME" | sed 's/ /%20/g')
+              DASHBOARD_LIST="${DASHBOARD_LIST}- **${DASH_NAME}**\n"
+              DASHBOARD_LIST="${DASHBOARD_LIST}  - File: \`${file}\`\n"
+              DASHBOARD_LIST="${DASHBOARD_LIST}  - Path: \`/FeatureBranches/${SAFE_BRANCH_NAME}/${DASH_NAME}\`\n"
+            fi
+          done
+          
+          echo "dashboard_list<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$DASHBOARD_LIST" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Comment on PR
+        if: steps.summary.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const branchName = context.payload.pull_request.head.ref;
+            const safeBranchName = process.env.SAFE_BRANCH_NAME;
+            const databricksHost = process.env.DATABRICKS_HOST;
+            const dashboardList = `${{ steps.summary.outputs.dashboard_list }}`;
+            const bundleOutput = `${{ steps.dashboards.outputs.bundle_output }}`;
+            
+            const body = `## 🚀 Feature Branch Deployed
+            
+            Your dashboards have been automatically deployed for review!
+            
+            ### 📊 Deployed Dashboards
+            ${dashboardList}
+            
+            ### 🔗 Access Your Dashboards
+            
+            **Workspace:** [${databricksHost}](https://${databricksHost})
+            
+            **Location:** \`/FeatureBranches/${safeBranchName}/\`
+            
+            **Direct Link:** [Open in Workspace](https://${databricksHost}/#workspace/FeatureBranches/${safeBranchName})
+            
+            ### 📝 Bundle Resources
+            <details>
+            <summary>Click to see deployment details</summary>
+            
+            \`\`\`
+            ${bundleOutput}
+            \`\`\`
+            </details>
+            
+            ### ✅ Review Checklist
+            - [ ] Dashboard renders correctly
+            - [ ] All widgets display data as expected
+            - [ ] Filters and parameters work properly
+            - [ ] No errors in queries
+            - [ ] Visual layout is appropriate
+            - [ ] Performance is acceptable
+            
+            ---
+            *This deployment will be automatically cleaned up when the PR is closed or merged.*
+            *Branch: \`${branchName}\`*
+            `;
+            
+            // Check if we already commented
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Feature Branch Deployed')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body
+              });
+            }
+      
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Successfully deployed feature branch: ${{ github.head_ref }}"
+          echo "Location: /FeatureBranches/${{ env.SAFE_BRANCH_NAME }}/"
+      
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: '❌ Feature branch deployment failed. Check the [workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
+            });

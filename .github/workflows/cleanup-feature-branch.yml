@@ -1,0 +1,98 @@
+name: Cleanup Feature Branch
+
+on:
+  pull_request:
+    branches:
+      - dev
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  cleanup-feature:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Download the Databricks CLI
+        uses: databricks/setup-cli@main
+      
+      - name: Destroy feature branch deployment
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          # Sanitize branch name for use in paths (replace / with -)
+          SAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+          
+          # Parse all dashboard names from resources/*.yml files
+          DASHBOARD_NAMES=$(grep -r "^  dashboards:" resources/*.yml -A 100 | grep "^    [a-zA-Z]" | sed 's/://g' | awk '{print $1}' | sort -u)
+          
+          # Create the feature target configuration (same as deploy)
+          cat >> databricks.yml << EOF
+
+targets:
+  feature-${SAFE_BRANCH_NAME}:
+    mode: development
+    workspace:
+      host: https://dbc-597c1f0f-03e2.cloud.databricks.com/
+      root_path: /Workspace/.bundle/feature-branches/${SAFE_BRANCH_NAME}
+    resources:
+      dashboards:
+EOF
+          
+          # Add parent_path override for each dashboard
+          for dashboard in $DASHBOARD_NAMES; do
+            cat >> databricks.yml << EOF
+        $dashboard:
+          parent_path: /FeatureBranches/${SAFE_BRANCH_NAME}
+EOF
+          done
+          
+          # Destroy the bundle
+          databricks bundle destroy -t feature-${SAFE_BRANCH_NAME} --auto-approve || true
+          
+          echo "SAFE_BRANCH_NAME=${SAFE_BRANCH_NAME}" >> $GITHUB_ENV
+      
+      - name: Clean up workspace folders
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: |
+          SAFE_BRANCH_NAME="${{ env.SAFE_BRANCH_NAME }}"
+          
+          # Delete the FeatureBranches folder for this branch
+          databricks workspace delete /FeatureBranches/${SAFE_BRANCH_NAME} --recursive || echo "Folder already deleted or doesn't exist"
+          
+          # Also clean up bundle state
+          databricks workspace delete /Workspace/.bundle/feature-branches/${SAFE_BRANCH_NAME} --recursive || echo "Bundle state already deleted or doesn't exist"
+      
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branchName = context.payload.pull_request.head.ref;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `🧹 Feature branch deployment has been cleaned up.\n\nBranch \`${branchName}\` dashboards have been removed from \`/FeatureBranches/${process.env.SAFE_BRANCH_NAME}/\``
+            });
+      
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Successfully cleaned up feature branch: ${{ github.head_ref }}"
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "⚠️ Cleanup failed for feature branch: ${{ github.head_ref }}"
+          echo "Manual cleanup may be required for /FeatureBranches/${{ env.SAFE_BRANCH_NAME }}/"
