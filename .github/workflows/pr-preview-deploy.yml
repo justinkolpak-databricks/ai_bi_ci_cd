@@ -124,7 +124,7 @@ jobs:
             - **Databricks Host:** \`${{ secrets.DATABRICKS_HOST_DEV }}\`
 
             ### 🔗 Access Preview
-            [${{ secrets.DATABRICKS_HOST_DEV }}](${{ secrets.DATABRICKS_HOST_DEV }}/#root_path: /Workspace/.bundle/pr-previews/pr-${{ github.event.pull_request.number }})
+            [Link to Preview Dashboard](${{ secrets.DATABRICKS_HOST_DEV }}/Workspace/.bundle/pr-previews/pr-${{ github.event.pull_request.number }})
                         
             ### Deployed Resources
             \`\`\`
