@@ -32,24 +32,23 @@ jobs:
           DASHBOARD_NAMES=$(grep -r "^  dashboards:" resources/*.yml -A 100 | grep "^    [a-zA-Z]" | sed 's/://g' | awk '{print $1}' | sort -u)
           
           # Create the feature target configuration
-          cat >> databricks.yml << EOF
-
-targets:
-  feature-${SAFE_BRANCH_NAME}:
-    mode: development
-    workspace:
-      host: https://dbc-597c1f0f-03e2.cloud.databricks.com/
-      root_path: /Workspace/.bundle/feature-branches/${SAFE_BRANCH_NAME}
-    resources:
-      dashboards:
-EOF
+          cat << HEREDOC | sed 's/^          //' >> databricks.yml
+          targets:
+            feature-${SAFE_BRANCH_NAME}:
+              mode: development
+              workspace:
+                host: https://dbc-597c1f0f-03e2.cloud.databricks.com/
+                root_path: /Workspace/.bundle/feature-branches/${SAFE_BRANCH_NAME}
+              resources:
+                dashboards:
+          HEREDOC
           
           # Add parent_path override for each dashboard
           for dashboard in $DASHBOARD_NAMES; do
-            cat >> databricks.yml << EOF
-        $dashboard:
-          parent_path: /FeatureBranches/${SAFE_BRANCH_NAME}
-EOF
+            cat << HEREDOC | sed 's/^            //' >> databricks.yml
+                    $dashboard:
+                      parent_path: /FeatureBranches/${SAFE_BRANCH_NAME}
+            HEREDOC
           done
           
           echo "SAFE_BRANCH_NAME=${SAFE_BRANCH_NAME}" >> $GITHUB_ENV
